@@ -9,12 +9,26 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <!-- Hosts the WebView's custom full-screen video view. -->
     <FrameLayout
         android:id="@+id/fullscreen_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="@android:color/black"
         android:visibility="gone" />
+
+    <!--
+        Invisible long-press target in the top-left corner that flips the
+        user-agent between mobile and desktop. Kept small and translucent so it
+        does not interfere with normal taps on the page; only long-press works.
+    -->
+    <View
+        android:id="@+id/ua_toggle_hotspot"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_gravity="top|start"
+        android:background="@android:color/transparent"
+        android:clickable="true"
+        android:focusable="false"
+        android:longClickable="true" />
 
 </FrameLayout>

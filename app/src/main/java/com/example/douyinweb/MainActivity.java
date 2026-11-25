@@ -26,10 +26,17 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String HOME_URL = "https://www.douyin.com";
 
+    private static final String PREFS_NAME = "douyin_web_prefs";
+    private static final String PREF_UA_MODE = "ua_mode";
+
+    /** Douyin renders its responsive mobile layout for this identity. */
+    private static final String MOBILE_UA =
+            "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 "
+                    + "(KHTML, like Gecko) Chrome/119.0.0.0 Mobile Safari/537.36";
+
     /**
-     * Desktop Chrome UA. Douyin's web front-end degrades badly when handed a
-     * generic/unknown WebView UA, so we intentionally present a desktop Chrome
-     * identity and pair it with wide-viewport settings below.
+     * Desktop Chrome identity. Kept as a fallback: it is the layout Douyin serves
+     * when it refuses the mobile one, and it was verified to play video correctly.
      */
     private static final String DESKTOP_UA =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -51,7 +58,9 @@ public class MainActivity extends AppCompatActivity {
 
         configureWebView();
         configureCookieManager();
+        applySystemBarInsets();
         wireBackNavigation();
+        wireUserAgentToggle();
 
         if (savedInstanceState != null) {
             webView.restoreState(savedInstanceState);
@@ -60,15 +69,27 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /** True when the persisted preference selects the desktop identity. */
+    private boolean isDesktopMode() {
+        return getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                .getBoolean(PREF_UA_MODE, false);
+    }
+
+    private String currentUserAgent() {
+        return isDesktopMode() ? DESKTOP_UA : MOBILE_UA;
+    }
+
     private void configureWebView() {
         WebSettings s = webView.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
         s.setDatabaseEnabled(true);
-        s.setUserAgentString(DESKTOP_UA);
+        s.setUserAgentString(currentUserAgent());
 
-        s.setUseWideViewPort(true);
-        s.setLoadWithOverviewMode(true);
+        // Mobile-first rendering: let the page lay itself out for a phone-width
+        // viewport instead of zooming a desktop layout down to fit.
+        s.setUseWideViewPort(false);
+        s.setLoadWithOverviewMode(false);
         s.setSupportZoom(false);
         s.setBuiltInZoomControls(false);
         s.setDisplayZoomControls(false);
@@ -86,6 +107,57 @@ public class MainActivity extends AppCompatActivity {
         webView.setHorizontalScrollBarEnabled(false);
         webView.setWebViewClient(new DouyinWebViewClient());
         webView.setWebChromeClient(new DouyinChromeClient());
+    }
+
+    /**
+     * The player controls live at the very bottom of the page. If the WebView is
+     * laid out over the gesture/navigation bar, taps there hit the system UI and
+     * the bottom of the page becomes untappable. Reserve that space as padding.
+     *
+     * API 30+ reads real insets. On older releases the window is not drawn edge
+     * to edge by default, so the framework already keeps the WebView clear and
+     * no extra padding is needed.
+     */
+    private void applySystemBarInsets() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            return;
+        }
+        webView.setOnApplyWindowInsetsListener((v, insets) -> {
+            android.graphics.Insets bars =
+                    insets.getInsets(WindowInsets.Type.navigationBars()
+                            | WindowInsets.Type.statusBars()
+                            | WindowInsets.Type.displayCutout());
+            v.setPadding(0, bars.top, 0, bars.bottom);
+            return insets;
+        });
+        webView.requestApplyInsets();
+    }
+
+    /**
+     * Long-press the small hotspot in the top-left corner to flip between the
+     * mobile and desktop identities, then reload. Douyin decides its layout from
+     * the UA, so this is the escape hatch when the mobile layout is unavailable.
+     * A separate overlay is used rather than a listener on the WebView itself so
+     * that long-pressing video/text keeps working normally.
+     */
+    private void wireUserAgentToggle() {
+        View hotspot = findViewById(R.id.ua_toggle_hotspot);
+        if (hotspot == null) {
+            return;
+        }
+        hotspot.setOnLongClickListener(v -> {
+            boolean toDesktop = !isDesktopMode();
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                    .edit()
+                    .putBoolean(PREF_UA_MODE, toDesktop)
+                    .apply();
+            webView.getSettings().setUserAgentString(currentUserAgent());
+            webView.reload();
+            Toast.makeText(this,
+                    toDesktop ? R.string.switched_to_desktop : R.string.switched_to_mobile,
+                    Toast.LENGTH_SHORT).show();
+            return true;
+        });
     }
 
     private void configureCookieManager() {

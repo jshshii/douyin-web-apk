@@ -3,4 +3,6 @@
     <string name="app_name">抖音</string>
     <string name="press_back_again_to_exit">再按一次返回键退出</string>
     <string name="no_app_handled_link">未安装可处理该链接的应用</string>
+    <string name="switched_to_desktop">已切换到桌面版，正在刷新</string>
+    <string name="switched_to_mobile">已切换到移动版，正在刷新</string>
 </resources>
