@@ -31,10 +31,18 @@ jobs:
       - name: Build Debug APK
         run: |
           if [ -x ./gradlew ]; then
-            ./gradlew :app:assembleDebug --no-daemon --stacktrace
+            GRADLE_CMD="./gradlew"
           else
-            gradle :app:assembleDebug --no-daemon --stacktrace
+            GRADLE_CMD="gradle"
           fi
+          $GRADLE_CMD :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Show resolved Kotlin dependencies
+        if: always()
+        run: |
+          if [ -x ./gradlew ]; then GRADLE_CMD="./gradlew"; else GRADLE_CMD="gradle"; fi
+          $GRADLE_CMD :app:dependencies --configuration debugRuntimeClasspath \
+            --no-daemon 2>/dev/null | grep -i kotlin || true
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

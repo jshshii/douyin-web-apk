@@ -1,3 +1,8 @@
 plugins {
     id 'com.android.application' version '8.2.2' apply false
+    // Pin the Kotlin Gradle plugin so the transitive Kotlin version resolved through
+    // androidx (kotlin-stdlib-jdk7/jdk8 1.6.21 via appcompat 1.6.1) cannot fall behind
+    // kotlin-stdlib 1.8.22 pulled by androidx.activity 1.8.2. Mismatched jdk7/jdk8 vs
+    // stdlib produces "duplicate class" failures in :app:checkDebugDuplicateClasses.
+    id 'org.jetbrains.kotlin.android' version '1.8.22' apply false
 }
