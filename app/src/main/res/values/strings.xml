@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">抖音</string>
+    <string name="press_back_again_to_exit">再按一次返回键退出</string>
+    <string name="no_app_handled_link">未安装可处理该链接的应用</string>
 </resources>

@@ -3,6 +3,8 @@ name: Build APK
 on:
   push:
     branches: [ main ]
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -18,17 +20,26 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      # setup-gradle can generate the wrapper when the repo does not ship one.
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 8.7
+          generate-wrapper-cache: false
 
+      # Uses the checked-in wrapper when present, otherwise the gradle on PATH.
       - name: Build Debug APK
-        run: gradle assembleDebug --no-daemon
+        run: |
+          if [ -x ./gradlew ]; then
+            ./gradlew :app:assembleDebug --no-daemon --stacktrace
+          else
+            gradle :app:assembleDebug --no-daemon --stacktrace
+          fi
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: douyin-web-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
           retention-days: 30
